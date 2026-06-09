@@ -338,7 +338,7 @@ function renderBoard(){
         <button class="col-add-btn" onclick="openModal('${col.id}')">+</button>
       </div>
       <div class="cards-area" id="area-${col.id}">${cc.length===0?'<div class="empty">Sem tarefas</div>':''}</div>
-      <button class="add-card" onclick="openModal('${col.id}')">+ Adicionar card</button>`
+`
     board.appendChild(colEl)
     const area=colEl.querySelector('.cards-area')
     cc.forEach(card=>area.appendChild(buildCard(card)))
@@ -372,8 +372,9 @@ function buildCard(card){
     </div>
     <div class="card-footer">
       ${card.owner?`<div class="card-owner"><div class="avatar-sm">${ini}</div>${escHtml(card.owner)}</div>`:''}
-      <div class="card-spacer"></div>${deadlineHtml}
+      <div class="card-spacer"></div>
     </div>
+    ${deadlineHtml}
 `
   el.addEventListener('click',e=>{if(!e.target.closest('.card-menu'))editCard(card.id)})
   el.addEventListener('dragstart',()=>{dragId=card.id;setTimeout(()=>el.classList.add('dragging'),0)})
@@ -484,7 +485,7 @@ function openModal(status){
   document.getElementById('modal-title').textContent='Novo card'
   document.getElementById('f-title').value=''
   document.getElementById('f-desc').value=''
-  document.getElementById('f-status').value=status||'Entrada'
+  document.getElementById('f-status').value='Entrada'
   document.getElementById('f-priority').value='Média'
   document.getElementById('f-owner').value=currentUser
   document.getElementById('f-deadline').value=''
