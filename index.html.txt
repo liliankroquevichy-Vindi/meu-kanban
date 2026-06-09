@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kanban — Gestão de Projetos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:         #F7F6F3;
+    --white:      #FFFFFF;
+    --border:     #E8E6E0;
+    --border2:    #D0CEC7;
+    --text:       #1A1918;
+    --muted:      #706E68;
+    --light:      #A09E98;
+    --accent:     #6366F1;
+    --accent-dk:  #4F46E5;
+    --header:     #18181B;
+
+    --s-inbox-bg: #EEEDFE; --s-inbox-fg: #4740B6;
+    --s-doing-bg: #D1FAE5; --s-doing-fg: #065F46;
+    --s-done-bg:  #DBEAFE; --s-done-fg:  #1E40AF;
+    --s-block-bg: #FEE2E2; --s-block-fg: #991B1B;
+
+    --p-high-bg:  #FEE2E2; --p-high-fg:  #991B1B;
+    --p-med-bg:   #FEF3C7; --p-med-fg:   #92400E;
+    --p-low-bg:   #D1FAE5; --p-low-fg:   #065F46;
+
+    --radius:     10px;
+    --radius-sm:  6px;
+    --shadow:     0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+    --shadow-lg:  0 10px 25px rgba(0,0,0,.12);
+  }
+  html, body { height: 100%; font-family: -apple-system, 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ── Login Screen ─────────────────────────────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; z-index: 999;
+  }
+  .login-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 16px; padding: 40px; width: 360px;
+    box-shadow: var(--shadow-lg); text-align: center;
+  }
+  .login-card .logo {
+    width: 48px; height: 48px; background: var(--accent);
+    border-radius: 12px; margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: white;
+  }
+  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-card p  { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .login-card input {
+    width: 100%; padding: 10px 14px; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 14px; outline: none;
+    transition: border .15s; margin-bottom: 12px;
+  }
+  .login-card input:focus { border-color: var(--accent); }
+  .btn-primary {
+    width: 100%; padding: 10px; background: var(--accent); color: white;
+    border: none; border-radius: var(--radius-sm); font-size: 14px;
+    font-weight: 500; cursor: pointer; transition: background .15s;
+  }
+  .btn-primary:hover { background: var(--accent-dk); }
+
+  /* ── Top Nav ──────────────────────────────────────────────────────────── */
+  nav {
+    background: var(--header); height: 52px;
+    display: flex; align-items: center; padding: 0 24px;
+    gap: 16px; position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo { font-size: 16px; font-weight: 700; color: white; letter-spacing: -.3px; }
+  .nav-logo span { color: var(--accent); }
+  .nav-spacer { flex: 1; }
+  .nav-user {
+    display: flex; align-items: center; gap: 8px;
+    color: #A1A1AA; font-size: 13px;
+  }
+  .nav-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 11px; font-weight: 600;
+  }
+  .btn-icon {
+    background: none; border: 1px solid #3F3F46; color: #A1A1AA;
+    border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px;
+    cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-icon:hover { background: #27272A; color: white; }
+
+  /* ── Board Layout ─────────────────────────────────────────────────────── */
+  .board-header {
+    padding: 20px 24px 0;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .board-header h2 { font-size: 18px; font-weight: 600; }
+  .board-header .count { font-size: 12px; color: var(--muted); background: var(--white); border: 1px solid var(--border); padding: 2px 8px; border-radius: 20px; }
+
+  .board {
+    display: flex; gap: 16px;
+    padding: 20px 24px 32px;
+    overflow-x: auto; min-height: calc(100vh - 130px);
+    align-items: flex-start;
+  }
+
+  /* ── Column ───────────────────────────────────────────────────────────── */
+  .column { flex: 0 0 280px; display: flex; flex-direction: column; gap: 0; }
+  .col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px 10px; border-bottom: 2px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .col-header.inbox  { border-color: var(--s-inbox-fg); }
+  .col-header.doing  { border-color: var(--s-doing-fg); }
+  .col-header.done   { border-color: var(--s-done-fg); }
+  .col-header.blocked{ border-color: var(--s-block-fg); }
+
+  .col-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+  .col-pill {
+    font-size: 11px; font-weight: 600; padding: 1px 8px;
+    border-radius: 20px; letter-spacing: .2px;
+  }
+  .pill-inbox  { background: var(--s-inbox-bg); color: var(--s-inbox-fg); }
+  .pill-doing  { background: var(--s-doing-bg); color: var(--s-doing-fg); }
+  .pill-done   { background: var(--s-done-bg);  color: var(--s-done-fg); }
+  .pill-blocked{ background: var(--s-block-bg); color: var(--s-block-fg); }
+
+  .col-add-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--light); font-size: 18px; line-height: 1;
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; transition: all .15s;
+  }
+  .col-add-btn:hover { background: var(--border); color: var(--text); }
+
+  /* ── Cards Area ───────────────────────────────────────────────────────── */
+  .cards-area {
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 80px; border-radius: var(--radius);
+    padding: 4px; transition: background .15s;
+  }
+  .cards-area.drag-over { background: rgba(99,102,241,.06); outline: 2px dashed var(--accent); outline-offset: -2px; }
+
+  /* ── Card ─────────────────────────────────────────────────────────────── */
+  .card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    cursor: grab; user-select: none;
+    transition: box-shadow .15s, border-color .15s, opacity .15s;
+    position: relative;
+  }
+  .card:hover { box-shadow: var(--shadow); border-color: var(--border2); }
+  .card.dragging { opacity: .35; box-shadow: none; }
+  .card-menu {
+    position: absolute; top: 10px; right: 10px;
+    display: none; gap: 4px;
+  }
+  .card:hover .card-menu { display: flex; }
+  .card-menu-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; width: 24px; height: 24px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 12px; transition: all .15s;
+  }
+  .card-menu-btn:hover { background: var(--white); color: var(--text); border-color: var(--border2); }
+  .card-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 10px; padding-right: 52px; }
+  .card-tags  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; letter-spacing: .2px;
+  }
+  .tag-status-inbox   { background: var(--s-inbox-bg); color: var(--s-inbox-fg); }
+  .tag-status-doing   { background: var(--s-doing-bg); color: var(--s-doing-fg); }
+  .tag-status-done    { background: var(--s-done-bg);  color: var(--s-done-fg); }
+  .tag-status-blocked { background: var(--s-block-bg); color: var(--s-block-fg); }
+  .tag-prio-alta  { background: var(--p-high-bg); color: var(--p-high-fg); }
+  .tag-prio-media { background: var(--p-med-bg);  color: var(--p-med-fg); }
+  .tag-prio-baixa { background: var(--p-low-bg);  color: var(--p-low-fg); }
+
+  .card-footer { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .card-owner {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--muted);
+  }
+  .avatar-sm {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--s-inbox-bg); color: var(--s-inbox-fg);
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-spacer { flex: 1; }
+  .card-deadline { font-size: 10px; color: var(--light); }
+  .card-deadline.overdue { color: var(--s-block-fg); font-weight: 600; }
+
+  /* Progress bar */
+  .prog-wrap { margin-top: 10px; }
+  .prog-bar  { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+  .prog-label { font-size: 10px; color: var(--muted); text-align: right; margin-top: 2px; }
+
+  /* ── Add Card Button ──────────────────────────────────────────────────── */
+  .add-card {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: 1px dashed var(--border2);
+    border-radius: var(--radius); padding: 8px 12px;
+    cursor: pointer; color: var(--light); font-size: 12px;
+    font-family: inherit; width: 100%; margin-top: 4px;
+    transition: all .15s;
+  }
+  .add-card:hover { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,.04); }
+
+  /* ── Modal ────────────────────────────────────────────────────────────── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 14px;
+    padding: 28px; width: 440px; max-width: 95vw;
+    box-shadow: var(--shadow-lg);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; padding: 2px; }
+  .modal-close:hover { color: var(--text); }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+    outline: none; transition: border .15s; background: var(--white); color: var(--text);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 72px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .prog-input-wrap { display: flex; align-items: center; gap: 10px; }
+  .prog-input-wrap input[type=range] { flex: 1; }
+  .prog-val { font-size: 13px; font-weight: 600; color: var(--accent); min-width: 36px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
+  .btn-cancel {
+    padding: 9px 18px; background: none; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 13px; cursor: pointer;
+    color: var(--muted); font-family: inherit; transition: all .15s;
+  }
+  .btn-cancel:hover { background: var(--bg); color: var(--text); }
+  .btn-save {
+    padding: 9px 20px; background: var(--accent); border: none;
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+    cursor: pointer; color: white; font-family: inherit; transition: background .15s;
+  }
+  .btn-save:hover { background: var(--accent-dk); }
+
+  /* ── Toast ────────────────────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    background: var(--header); color: white; padding: 10px 18px;
+    border-radius: var(--radius-sm); font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(8px);
+    transition: all .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Loading ──────────────────────────────────────────────────────────── */
+  .loading { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Empty state ──────────────────────────────────────────────────────── */
+  .empty { padding: 24px 12px; text-align: center; color: var(--light); font-size: 12px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">📋</div>
+    <h1>Bem-vindo ao Kanban</h1>
+    <p>Digite seu nome para entrar</p>
+    <input type="text" id="login-input" placeholder="Seu nome..." maxlength="40"/>
+    <button class="btn-primary" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">kan<span>ban</span></div>
+  <div class="nav-spacer"></div>
+  <div class="nav-user">
+    <div class="nav-avatar" id="nav-avatar">?</div>
+    <span id="nav-name">—</span>
+  </div>
+  <button class="btn-icon" onclick="openModal()">
+    <span>+</span> Novo card
+  </button>
+  <button class="btn-icon" onclick="logout()">Sair</button>
+</nav>
+
+<!-- BOARD -->
+<div class="board-header">
+  <h2>Projetos & Tarefas</h2>
+  <span class="count" id="total-count">0 tarefas</span>
+</div>
+
+<div class="board" id="board">
+  <div class="loading"><span class="spinner"></span>Carregando...</div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Novo card</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="field">
+      <label>Tarefa *</label>
+      <input type="text" id="f-title" placeholder="Nome da tarefa..."/>
+    </div>
+    <div class="field">
+      <label>Descrição</label>
+      <textarea id="f-desc" placeholder="Detalhes opcionais..."></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">
+          <option>Entrada</option>
+          <option>Fazendo</option>
+          <option>Concluído</option>
+          <option>Bloqueado</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Prioridade</label>
+        <select id="f-priority">
+          <option>Alta</option>
+          <option>Média</option>
+          <option>Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Responsável</label>
+        <input type="text" id="f-owner" placeholder="Nome..."/>
+      </div>
+      <div class="field">
+        <label>Prazo</label>
+        <input type="date" id="f-deadline"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Categoria</label>
+      <input type="text" id="f-category" placeholder="Ex: Dev, Design, Marketing..."/>
+    </div>
+    <div class="field">
+      <label>Progresso — <span id="prog-val">0%</span></label>
+      <div class="prog-input-wrap">
+        <input type="range" id="f-progress" min="0" max="100" step="5" value="0"
+          oninput="document.getElementById('prog-val').textContent=this.value+'%'"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveCard()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG — substitua com suas chaves do Supabase ────────────────────────
+const SUPABASE_URL = 'https://swvovhkkvepnzxrmtzof.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dm92aGtrdmVwbnp4cm10em9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODkzNjksImV4cCI6MjA5NjU2NTM2OX0.0zYNf-j0pFtej_C_ZRHBWhEJrdC69GiIzWJXRmDMBj4'
+// ─────────────────────────────────────────────────────────────────────────
+
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── State ─────────────────────────────────────────────────────────────────
+let cards = []
+let currentUser = ''
+let editingId = null
+let defaultStatus = 'Entrada'
+let dragId = null
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+function doLogin() {
+  const name = document.getElementById('login-input').value.trim()
+  if (!name) return
+  currentUser = name
+  localStorage.setItem('kanban_user', name)
+  document.getElementById('login-screen').style.display = 'none'
+  document.getElementById('nav-name').textContent = name
+  document.getElementById('nav-avatar').textContent = name.slice(0,2).toUpperCase()
+  document.getElementById('f-owner').value = name
+  initBoard()
+}
+
+function logout() {
+  localStorage.removeItem('kanban_user')
+  location.reload()
+}
+
+// auto-login
+const saved = localStorage.getItem('kanban_user')
+if (saved) {
+  currentUser = saved
+  document.getElementById('login-input').value = saved
+  doLogin()
+}
+
+document.getElementById('login-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin()
+})
+
+// ── Board Init ────────────────────────────────────────────────────────────
+async function initBoard() {
+  await loadCards()
+  subscribeRealtime()
+}
+
+// ── Load cards ────────────────────────────────────────────────────────────
+async function loadCards() {
+  const { data, error } = await db.from('cards').select('*').order('position').order('created_at')
+  if (error) { showToast('Erro ao carregar: ' + error.message); return }
+  cards = data || []
+  renderBoard()
+}
+
+// ── Realtime sync ─────────────────────────────────────────────────────────
+function subscribeRealtime() {
+  db.channel('cards-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cards' }, () => loadCards())
+    .subscribe()
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+const COLS = [
+  { id: 'Entrada',   label: 'Entrada',   cls: 'inbox',   pillCls: 'pill-inbox'   },
+  { id: 'Fazendo',   label: 'Fazendo',   cls: 'doing',   pillCls: 'pill-doing'   },
+  { id: 'Concluído', label: 'Concluído', cls: 'done',    pillCls: 'pill-done'    },
+  { id: 'Bloqueado', label: 'Bloqueado', cls: 'blocked', pillCls: 'pill-blocked' },
+]
+
+function renderBoard() {
+  const board = document.getElementById('board')
+  board.innerHTML = ''
+  document.getElementById('total-count').textContent = cards.length + ' tarefa' + (cards.length !== 1 ? 's' : '')
+
+  COLS.forEach(col => {
+    const colCards = cards.filter(c => c.status === col.id)
+    const colEl = document.createElement('div')
+    colEl.className = 'column'
+    colEl.innerHTML = `
+      <div class="col-header ${col.cls}">
+        <div class="col-title">
+          ${col.label}
+          <span class="col-pill ${col.pillCls}">${colCards.length}</span>
+        </div>
+        <button class="col-add-btn" onclick="openModal('${col.id}')" title="Adicionar card">+</button>
+      </div>
+      <div class="cards-area" id="area-${col.id}">
+        ${colCards.length === 0 ? `<div class="empty">Sem tarefas aqui</div>` : ''}
+      </div>
+      <button class="add-card" onclick="openModal('${col.id}')">
+        <span style="font-size:16px">+</span> Adicionar card
+      </button>
+    `
+    board.appendChild(colEl)
+
+    const area = colEl.querySelector('.cards-area')
+    colCards.forEach(card => area.appendChild(buildCard(card)))
+    setupDropZone(area, col.id)
+  })
+}
+
+function buildCard(card) {
+  const el = document.createElement('div')
+  el.className = 'card'
+  el.draggable = true
+  el.dataset.id = card.id
+
+  const progColor = card.progress >= 100 ? '#10B981' : card.progress >= 60 ? '#6366F1' : card.progress >= 30 ? '#F59E0B' : '#F87171'
+  const statusCls = { 'Entrada':'inbox','Fazendo':'doing','Concluído':'done','Bloqueado':'blocked' }[card.status] || 'inbox'
+  const prioCls = { 'Alta':'alta','Média':'media','Baixa':'baixa' }[card.priority] || 'media'
+
+  const deadlineHtml = (() => {
+    if (!card.deadline) return ''
+    const d = new Date(card.deadline + 'T00:00:00')
+    const today = new Date(); today.setHours(0,0,0,0)
+    const overdue = d < today && card.status !== 'Concluído'
+    const fmt = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' })
+    return `<span class="card-deadline${overdue?' overdue':''}">${overdue ? '⚠ ' : ''}${fmt}</span>`
+  })()
+
+  const initials = card.owner ? card.owner.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : ''
+
+  el.innerHTML = `
+    <div class="card-menu">
+      <button class="card-menu-btn" onclick="editCard('${card.id}')" title="Editar">✏</button>
+      <button class="card-menu-btn" onclick="deleteCard('${card.id}')" title="Excluir" style="color:#991B1B">✕</button>
+    </div>
+    <div class="card-title">${escHtml(card.title)}</div>
+    <div class="card-tags">
+      <span class="tag tag-status-${statusCls}">${card.status}</span>
+      ${card.priority ? `<span class="tag tag-prio-${prioCls}">${card.priority}</span>` : ''}
+      ${card.category ? `<span class="tag" style="background:#F4F3F0;color:#706E68">${escHtml(card.category)}</span>` : ''}
+    </div>
+    <div class="card-footer">
+      ${card.owner ? `<div class="card-owner"><div class="avatar-sm">${initials}</div>${escHtml(card.owner)}</div>` : ''}
+      <div class="card-spacer"></div>
+      ${deadlineHtml}
+    </div>
+    ${card.progress > 0 ? `
+      <div class="prog-wrap">
+        <div class="prog-bar"><div class="prog-fill" style="width:${card.progress}%;background:${progColor}"></div></div>
+        <div class="prog-label">${card.progress}%</div>
+      </div>` : ''}
+  `
+
+  el.addEventListener('dragstart', () => { dragId = card.id; setTimeout(() => el.classList.add('dragging'), 0) })
+  el.addEventListener('dragend', () => { el.classList.remove('dragging'); dragId = null })
+  return el
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────
+function setupDropZone(area, status) {
+  area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over') })
+  area.addEventListener('dragleave', () => area.classList.remove('drag-over'))
+  area.addEventListener('drop', async e => {
+    e.preventDefault()
+    area.classList.remove('drag-over')
+    if (!dragId) return
+    const card = cards.find(c => c.id === dragId)
+    if (!card || card.status === status) return
+    await db.from('cards').update({ status }).eq('id', dragId)
+    showToast('Card movido para ' + status)
+  })
+}
+
+// ── CRUD ──────────────────────────────────────────────────────────────────
+function openModal(status) {
+  defaultStatus = status || 'Entrada'
+  editingId = null
+  document.getElementById('modal-title').textContent = 'Novo card'
+  document.getElementById('f-title').value = ''
+  document.getElementById('f-desc').value = ''
+  document.getElementById('f-status').value = defaultStatus
+  document.getElementById('f-priority').value = 'Média'
+  document.getElementById('f-owner').value = currentUser
+  document.getElementById('f-deadline').value = ''
+  document.getElementById('f-category').value = ''
+  document.getElementById('f-progress').value = 0
+  document.getElementById('prog-val').textContent = '0%'
+  document.getElementById('modal').classList.add('open')
+  setTimeout(() => document.getElementById('f-title').focus(), 50)
+}
+
+function editCard(id) {
+  const c = cards.find(x => x.id === id)
+  if (!c) return
+  editingId = id
+  document.getElementById('modal-title').textContent = 'Editar card'
+  document.getElementById('f-title').value = c.title || ''
+  document.getElementById('f-desc').value = c.description || ''
+  document.getElementById('f-status').value = c.status || 'Entrada'
+  document.getElementById('f-priority').value = c.priority || 'Média'
+  document.getElementById('f-owner').value = c.owner || ''
+  document.getElementById('f-deadline').value = c.deadline || ''
+  document.getElementById('f-category').value = c.category || ''
+  document.getElementById('f-progress').value = c.progress || 0
+  document.getElementById('prog-val').textContent = (c.progress || 0) + '%'
+  document.getElementById('modal').classList.add('open')
+}
+
+async function saveCard() {
+  const title = document.getElementById('f-title').value.trim()
+  if (!title) { document.getElementById('f-title').focus(); return }
+
+  const payload = {
+    title,
+    description: document.getElementById('f-desc').value.trim(),
+    status:    document.getElementById('f-status').value,
+    priority:  document.getElementById('f-priority').value,
+    owner:     document.getElementById('f-owner').value.trim(),
+    deadline:  document.getElementById('f-deadline').value || null,
+    category:  document.getElementById('f-category').value.trim(),
+    progress:  parseInt(document.getElementById('f-progress').value),
+  }
+
+  closeModal()
+  if (editingId) {
+    const { error } = await db.from('cards').update(payload).eq('id', editingId)
+    if (error) showToast('Erro ao salvar'); else showToast('Card atualizado ✓')
+  } else {
+    const { error } = await db.from('cards').insert(payload)
+    if (error) showToast('Erro ao criar'); else showToast('Card criado ✓')
+  }
+}
+
+async function deleteCard(id) {
+  if (!confirm('Excluir este card?')) return
+  const { error } = await db.from('cards').delete().eq('id', id)
+  if (error) showToast('Erro ao excluir'); else showToast('Card excluído')
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open') }
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal()
+})
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal() })
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 2500)
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+</script>
+</body>
+</html>
