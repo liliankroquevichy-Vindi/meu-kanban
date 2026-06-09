@@ -243,7 +243,7 @@
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f-status">
-          <option>Entrada</option><option>Fazendo</option><option>Validação</option><option>Concluído</option><option>Bloqueado</option>
+          <option>Entrada</option><option>Fazendo</option><option>Validação</option><option>Concluído</option>
         </select>
       </div>
       <div class="field"><label>Prioridade</label>
@@ -255,11 +255,6 @@
       <div class="field"><label>Prazo</label><input type="date" id="f-deadline"/></div>
     </div>
     <div class="field"><label>Categoria</label><input type="text" id="f-category" placeholder="Ex: Dev, Design, Marketing..."/></div>
-    <div class="field">
-      <label>Progresso — <span id="prog-val">0%</span></label>
-      <input type="range" id="f-progress" min="0" max="100" step="5" value="0" style="width:100%"
-        oninput="document.getElementById('prog-val').textContent=this.value+'%'"/>
-    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save" onclick="saveCard()">Salvar</button>
@@ -327,7 +322,6 @@ const COLS=[
   {id:'Fazendo',  cls:'doing',  pillCls:'pill-doing',  tagCls:'tag-doing'},
   {id:'Validação',cls:'valid',  pillCls:'pill-valid',  tagCls:'tag-valid'},
   {id:'Concluído',cls:'done',   pillCls:'pill-done',   tagCls:'tag-done'},
-  {id:'Bloqueado',cls:'blocked',pillCls:'pill-blocked',tagCls:'tag-blocked'},
 ]
 
 function renderBoard(){
@@ -355,7 +349,6 @@ function renderBoard(){
 function buildCard(card){
   const el=document.createElement('div')
   el.className='card';el.draggable=true;el.dataset.id=card.id
-  const pc=card.progress>=100?'#10B981':card.progress>=60?'#6366F1':card.progress>=30?'#F59E0B':'#F87171'
   const statusCls=COLS.find(c=>c.id===card.status)?.tagCls||'tag-inbox'
   const prioCls={'Alta':'tag-alta','Média':'tag-media','Baixa':'tag-baixa'}[card.priority]||'tag-media'
   let deadlineHtml=''
@@ -381,7 +374,8 @@ function buildCard(card){
       ${card.owner?`<div class="card-owner"><div class="avatar-sm">${ini}</div>${escHtml(card.owner)}</div>`:''}
       <div class="card-spacer"></div>${deadlineHtml}
     </div>
-    ${card.progress>0?`<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${card.progress}%;background:${pc}"></div></div><div class="prog-label">${card.progress}%</div></div>`:''}`
+`
+  el.addEventListener('click',e=>{if(!e.target.closest('.card-menu'))editCard(card.id)})
   el.addEventListener('dragstart',()=>{dragId=card.id;setTimeout(()=>el.classList.add('dragging'),0)})
   el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragId=null})
   return el
@@ -492,8 +486,6 @@ function openModal(status){
   document.getElementById('f-owner').value=currentUser
   document.getElementById('f-deadline').value=''
   document.getElementById('f-category').value=''
-  document.getElementById('f-progress').value=0
-  document.getElementById('prog-val').textContent='0%'
   document.getElementById('modal').classList.add('open')
   setTimeout(()=>document.getElementById('f-title').focus(),50)
 }
@@ -509,8 +501,6 @@ function editCard(id){
   document.getElementById('f-owner').value=c.owner||''
   document.getElementById('f-deadline').value=c.deadline||''
   document.getElementById('f-category').value=c.category||''
-  document.getElementById('f-progress').value=c.progress||0
-  document.getElementById('prog-val').textContent=(c.progress||0)+'%'
   document.getElementById('modal').classList.add('open')
 }
 
@@ -525,7 +515,6 @@ async function saveCard(){
     owner:document.getElementById('f-owner').value.trim(),
     deadline:document.getElementById('f-deadline').value||null,
     category:document.getElementById('f-category').value.trim(),
-    progress:parseInt(document.getElementById('f-progress').value),
   }
   closeModal()
   if(editingId){
@@ -538,7 +527,8 @@ async function saveCard(){
 }
 
 async function deleteCard(id){
-  if(!confirm('Excluir este card?'))return
+  const c=cards.find(x=>x.id===id);if(!c)return
+  if(!confirm(`Pricing Gestão\n\nDeseja excluir o card "${c.title}"?`))return
   const{error}=await db.from('cards').delete().eq('id',id)
   showToast(error?'Erro ao excluir':'Card excluído')
 }
