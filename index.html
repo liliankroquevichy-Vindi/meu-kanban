@@ -207,6 +207,25 @@
     <h2>Board</h2>
     <span class="count-badge" id="total-count">0 tarefas</span>
   </div>
+  <div style="padding:12px 24px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--muted);font-weight:600;">Filtrar por:</span>
+    <select id="filter-owner" onchange="renderBoard()" style="padding:5px 12px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:inherit;outline:none;background:var(--white);color:var(--text);cursor:pointer;">
+      <option value="">Todos</option>
+      <option>Davi Rangel</option>
+      <option>Joyce Diana</option>
+      <option>Keyla Lima</option>
+      <option>Lilian Kroquevichy</option>
+      <option>Rubia Vieira</option>
+    </select>
+    <select id="filter-priority" onchange="renderBoard()" style="padding:5px 12px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:inherit;outline:none;background:var(--white);color:var(--text);cursor:pointer;">
+      <option value="">Todas as prioridades</option>
+      <option>Alta</option>
+      <option>Média</option>
+      <option>Baixa</option>
+    </select>
+    <button onclick="document.getElementById('filter-owner').value='';document.getElementById('filter-priority').value='';renderBoard()" style="padding:5px 12px;border:1px solid var(--border2);border-radius:20px;font-size:12px;font-family:inherit;background:none;color:var(--muted);cursor:pointer;">✕ Limpar</button>
+    <span id="filter-info" style="font-size:12px;color:var(--muted);margin-left:4px;"></span>
+  </div>
   <div class="board" id="board">
     <div class="loading"><span class="spinner"></span>Carregando...</div>
   </div>
@@ -328,8 +347,23 @@ function renderBoard(){
   const board=document.getElementById('board')
   board.innerHTML=''
   document.getElementById('total-count').textContent=cards.length+' tarefa'+(cards.length!==1?'s':'')
+  const ownerF=document.getElementById('filter-owner')?.value||''
+  const prioF=document.getElementById('filter-priority')?.value||''
+  const filtered=cards.filter(c=>{
+    if(ownerF&&c.owner!==ownerF)return false
+    if(prioF&&c.priority!==prioF)return false
+    return true
+  })
+  const info=document.getElementById('filter-info')
+  if(info){
+    if(ownerF||prioF){
+      info.textContent=filtered.length+' tarefa'+(filtered.length!==1?'s':'')+' encontrada'+(filtered.length!==1?'s':'')
+    } else {
+      info.textContent=''
+    }
+  }
   COLS.forEach(col=>{
-    const cc=cards.filter(c=>c.status===col.id)
+    const cc=filtered.filter(c=>c.status===col.id)
     const colEl=document.createElement('div')
     colEl.className='column'
     colEl.innerHTML=`
@@ -353,10 +387,19 @@ function buildCard(card){
   const prioCls={'Alta':'tag-alta','Média':'tag-media','Baixa':'tag-baixa'}[card.priority]||'tag-media'
   let deadlineHtml=''
   if(card.deadline){
-    const d=new Date(card.deadline+'T00:00:00'),today=new Date()
-    today.setHours(0,0,0,0)
-    const ov=d<today&&card.status!=='Concluído'
-    deadlineHtml=`<span class="card-deadline${ov?' overdue':''}">${ov?'⚠ ':''}${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</span>`
+    const raw=card.deadline.includes('T')?card.deadline:card.deadline+'T12:00:00'
+    const d=new Date(raw)
+    const today=new Date();today.setHours(0,0,0,0)
+    const dDay=new Date(d);dDay.setHours(0,0,0,0)
+    const diff=Math.round((dDay-today)/(1000*60*60*24))
+    const done=card.status==='Concluído'
+    let dlBg,dlColor,dlIcon,dlLabel
+    if(done){dlBg='#D1FAE5';dlColor='#065F46';dlIcon='✓';dlLabel=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}
+    else if(diff<0){dlBg='#FEE2E2';dlColor='#991B1B';dlIcon='⚠';dlLabel='Atrasado '+Math.abs(diff)+'d'}
+    else if(diff===0){dlBg='#FEF3C7';dlColor='#92400E';dlIcon='●';dlLabel='Vence hoje'}
+    else if(diff<=3){dlBg='#FEF3C7';dlColor='#92400E';dlIcon='●';dlLabel=diff+'d restantes'}
+    else{dlBg='#D1FAE5';dlColor='#065F46';dlIcon='●';dlLabel=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}
+    deadlineHtml='<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:'+dlColor+';background:'+dlBg+';padding:3px 8px;border-radius:20px;margin-top:6px;">'+dlIcon+' '+dlLabel+'</span>'
   }
   const ini=card.owner?card.owner.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():''
   el.innerHTML=`
@@ -429,13 +472,13 @@ function renderPainel(){
   const total=fc.length
   const done=fc.filter(c=>c.status==='Concluído').length
   const doing=fc.filter(c=>c.status==='Fazendo').length
-  const blocked=fc.filter(c=>c.status==='Bloqueado').length
+  const blocked=fc.filter(c=>c.status==='Concluído').length
   const pct=total?Math.round(done/total*100):0
   document.getElementById('kpi-grid').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${total}</div><div class="kpi-sub">tarefas no período</div></div>
     <div class="kpi-card"><div class="kpi-label">Concluídas</div><div class="kpi-value" style="color:#065F46">${done}</div><div class="kpi-sub">${pct}% do total</div></div>
     <div class="kpi-card"><div class="kpi-label">Em andamento</div><div class="kpi-value" style="color:#92400E">${doing}</div><div class="kpi-sub">tarefas ativas</div></div>
-    <div class="kpi-card"><div class="kpi-label">Bloqueadas</div><div class="kpi-value" style="color:#991B1B">${blocked}</div><div class="kpi-sub">precisam atenção</div></div>
+    <div class="kpi-card"><div class="kpi-label">Concluídas</div><div class="kpi-value" style="color:#065F46">${blocked}</div><div class="kpi-sub">no período</div></div>
   `
   // Por pessoa
   const people=[...new Set(fc.map(c=>c.owner).filter(Boolean))].sort()
