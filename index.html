@@ -389,8 +389,11 @@ function setupDrop(area,status){
     if(!dragId)return
     const card=cards.find(c=>c.id===dragId)
     if(!card||card.status===status)return
-    await db.from('cards').update({status}).eq('id',dragId)
-    showToast('Movido para '+status)
+    const idx=cards.findIndex(c=>c.id===dragId)
+    if(idx>=0){cards[idx].status=status;renderBoard()}
+    db.from('cards').update({status}).eq('id',dragId).then(({error})=>{
+      if(error){showToast('Erro ao mover');loadCards()}else{showToast('Movido para '+status)}
+    })
   })
 }
 
@@ -518,19 +521,28 @@ async function saveCard(){
   }
   closeModal()
   if(editingId){
-    const{error}=await db.from('cards').update(payload).eq('id',editingId)
-    showToast(error?'Erro ao salvar':'Card atualizado ✓')
+    const idx=cards.findIndex(c=>c.id===editingId)
+    if(idx>=0){cards[idx]={...cards[idx],...payload};renderBoard()}
+    db.from('cards').update(payload).eq('id',editingId).then(({error})=>{
+      if(error){showToast('Erro ao salvar');loadCards()}else{showToast('Card atualizado ✓')}
+    })
   }else{
-    const{error}=await db.from('cards').insert(payload)
-    showToast(error?'Erro ao criar':'Card criado ✓')
+    const temp={id:'temp-'+Date.now(),...payload,created_at:new Date().toISOString()}
+    cards.push(temp);renderBoard()
+    db.from('cards').insert(payload).select().then(({data,error})=>{
+      if(error){showToast('Erro ao criar');cards=cards.filter(c=>c.id!==temp.id);renderBoard()}
+      else{cards=cards.filter(c=>c.id!==temp.id);if(data?.[0])cards.push(data[0]);renderBoard();showToast('Card criado ✓')}
+    })
   }
 }
 
 async function deleteCard(id){
   const c=cards.find(x=>x.id===id);if(!c)return
   if(!confirm(`Pricing Gestão\n\nDeseja excluir o card "${c.title}"?`))return
-  const{error}=await db.from('cards').delete().eq('id',id)
-  showToast(error?'Erro ao excluir':'Card excluído')
+  cards=cards.filter(x=>x.id!==id);renderBoard()
+  db.from('cards').delete().eq('id',id).then(({error})=>{
+    if(error){showToast('Erro ao excluir');loadCards()}else{showToast('Card excluído')}
+  })
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('open')}
