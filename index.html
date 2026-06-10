@@ -455,18 +455,22 @@ function buildCard(card){
     </div>
     ${deadlineHtml}
 `
-  // add checklist to card
+  // show small checklist badge on card
   if(card.checklist){
     try{
       const cl=JSON.parse(card.checklist)
       if(cl&&cl.length){
-        const clDiv=document.createElement('div')
-        clDiv.innerHTML=buildChecklistHtml(cl)
-        el.appendChild(clDiv.firstElementChild)
+        const total=cl.length
+        const done=cl.filter(i=>i.done).length
+        const pct=total?Math.round(done/total*100):0
+        const badge=document.createElement('div')
+        badge.style.cssText='display:flex;align-items:center;gap:6px;margin-top:8px;'
+        badge.innerHTML='<div style="flex:1;height:3px;background:var(--bg);border-radius:2px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:var(--accent);border-radius:2px;"></div></div><span style="font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0;">'+done+'/'+total+'</span>'
+        el.appendChild(badge)
       }
     }catch(e){}
   }
-  el.addEventListener('click',e=>{if(!e.target.closest('.card-menu')&&!e.target.closest('.checklist-wrap'))editCard(card.id)})
+  el.addEventListener('click',e=>{if(!e.target.closest('.card-menu'))editCard(card.id)})
   el.addEventListener('dragstart',()=>{dragId=card.id;setTimeout(()=>el.classList.add('dragging'),0)})
   el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragId=null})
   return el
