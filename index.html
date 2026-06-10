@@ -706,10 +706,29 @@ async function toggleChecklistItem(itemId, done, event){
   let checklist = card.checklist ? JSON.parse(card.checklist) : []
   const idx = checklist.findIndex(i=>i.id===itemId)
   if(idx>=0) checklist[idx].done = done
-  const payload = {checklist: JSON.stringify(checklist)}
-  cards.find(c=>c.id===cardId).checklist = JSON.stringify(checklist)
-  renderBoard()
-  db.from('cards').update(payload).eq('id',cardId)
+  const clJson = JSON.stringify(checklist)
+  cards.find(c=>c.id===cardId).checklist = clJson
+
+  // update checklist UI inline without full re-render
+  const clWrap = cardEl.querySelector('.checklist-wrap')
+  if(clWrap){
+    const total = checklist.length
+    const doneCount = checklist.filter(i=>i.done).length
+    const pct = total ? Math.round(doneCount/total*100) : 0
+    const fill = clWrap.querySelector('.cl-prog-fill')
+    if(fill) fill.style.width = pct+'%'
+    const count = clWrap.querySelector('.checklist-count')
+    if(count) count.textContent = doneCount+'/'+total
+    // update strikethrough
+    const itemTexts = clWrap.querySelectorAll('.cl-item-text')
+    checklist.forEach((item,i)=>{
+      if(itemTexts[i]){
+        if(item.done) itemTexts[i].classList.add('done')
+        else itemTexts[i].classList.remove('done')
+      }
+    })
+  }
+  db.from('cards').update({checklist: clJson}).eq('id',cardId)
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('open')}
