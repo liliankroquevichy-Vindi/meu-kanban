@@ -168,6 +168,27 @@
   .loading{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
   .spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* CHECKLIST */
+  .checklist-wrap{border-top:1px solid var(--border);padding-top:10px;margin-top:8px;}
+  .checklist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .checklist-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px;}
+  .checklist-count{font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;background:var(--bg);color:var(--muted);}
+  .checklist-prog{margin-bottom:6px;}
+  .cl-prog-bar{height:3px;background:var(--bg);border-radius:2px;overflow:hidden;}
+  .cl-prog-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s;}
+  .cl-items{display:flex;flex-direction:column;gap:4px;}
+  .cl-item{display:flex;align-items:center;gap:7px;}
+  .cl-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+  .cl-item-text{font-size:11px;color:var(--text);}
+  .cl-item-text.done{text-decoration:line-through;color:var(--light);}
+  .cl-add-btn{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;margin-top:6px;padding:0;}
+  .cl-add-btn:hover{opacity:.8;}
+  .cl-input-row{display:flex;gap:6px;margin-top:6px;}
+  .cl-input-row input{flex:1;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:11px;font-family:inherit;outline:none;}
+  .cl-input-row input:focus{border-color:var(--accent);}
+  .cl-input-row button{padding:4px 10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit;}
+
 </style>
 </head>
 <body>
@@ -284,6 +305,11 @@
       <div class="field"><label>Prazo</label><input type="date" id="f-deadline"/></div>
     </div>
     <div class="field"><label>Categoria</label><input type="text" id="f-category" placeholder="Ex: Dev, Design, Marketing..."/></div>
+    <div class="field">
+      <label>Checklist</label>
+      <div id="modal-checklist" style="border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:6px;"></div>
+      <button type="button" onclick="addChecklistItem()" style="margin-top:6px;font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;display:flex;align-items:center;gap:4px;">+ Adicionar item</button>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
       <button class="btn-save" onclick="saveCard()">Salvar</button>
@@ -429,7 +455,18 @@ function buildCard(card){
     </div>
     ${deadlineHtml}
 `
-  el.addEventListener('click',e=>{if(!e.target.closest('.card-menu'))editCard(card.id)})
+  // add checklist to card
+  if(card.checklist){
+    try{
+      const cl=JSON.parse(card.checklist)
+      if(cl&&cl.length){
+        const clDiv=document.createElement('div')
+        clDiv.innerHTML=buildChecklistHtml(cl)
+        el.appendChild(clDiv.firstElementChild)
+      }
+    }catch(e){}
+  }
+  el.addEventListener('click',e=>{if(!e.target.closest('.card-menu')&&!e.target.closest('.checklist-wrap'))editCard(card.id)})
   el.addEventListener('dragstart',()=>{dragId=card.id;setTimeout(()=>el.classList.add('dragging'),0)})
   el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragId=null})
   return el
@@ -543,6 +580,8 @@ function openModal(status){
   document.getElementById('f-owner').value=currentUser
   document.getElementById('f-deadline').value=''
   document.getElementById('f-category').value=''
+  modalChecklist=[]
+  renderModalChecklist()
   document.getElementById('modal').classList.add('open')
   setTimeout(()=>document.getElementById('f-title').focus(),50)
 }
@@ -558,6 +597,8 @@ function editCard(id){
   document.getElementById('f-owner').value=c.owner||''
   document.getElementById('f-deadline').value=c.deadline||''
   document.getElementById('f-category').value=c.category||''
+  modalChecklist=c.checklist?JSON.parse(c.checklist):[]
+  renderModalChecklist()
   document.getElementById('modal').classList.add('open')
 }
 
@@ -572,6 +613,7 @@ async function saveCard(){
     owner:document.getElementById('f-owner').value.trim(),
     deadline:document.getElementById('f-deadline').value||null,
     category:document.getElementById('f-category').value.trim(),
+    checklist:JSON.stringify(modalChecklist),
   }
   closeModal()
   if(editingId){
@@ -597,6 +639,77 @@ async function deleteCard(id){
   db.from('cards').delete().eq('id',id).then(({error})=>{
     if(error){showToast('Erro ao excluir');loadCards()}else{showToast('Card excluído')}
   })
+}
+
+
+// ── Checklist ─────────────────────────────────────────────────────────────
+let modalChecklist = []
+
+function addChecklistItem(text=''){
+  const id = 'cl-' + Date.now()
+  modalChecklist.push({id, text, done: false})
+  renderModalChecklist()
+  setTimeout(()=>{
+    const inp = document.getElementById('cl-inp-'+id)
+    if(inp) inp.focus()
+  }, 30)
+}
+
+function renderModalChecklist(){
+  const wrap = document.getElementById('modal-checklist')
+  if(!wrap) return
+  wrap.innerHTML = ''
+  modalChecklist.forEach((item, idx) => {
+    const row = document.createElement('div')
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;'
+    row.innerHTML = `
+      <input type="checkbox" ${item.done?'checked':''} style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;"
+        onchange="modalChecklist[${idx}].done=this.checked;renderModalChecklist()"/>
+      <input type="text" id="cl-inp-${item.id}" value="${escHtml(item.text)}" placeholder="Subtarefa..."
+        style="flex:1;padding:4px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:12px;font-family:inherit;outline:none;"
+        oninput="modalChecklist[${idx}].text=this.value"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();addChecklistItem()}"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'"/>
+      <button onclick="modalChecklist.splice(${idx},1);renderModalChecklist()"
+        style="background:none;border:none;cursor:pointer;color:var(--light);font-size:14px;padding:0 2px;line-height:1;">✕</button>`
+    wrap.appendChild(row)
+  })
+}
+
+function buildChecklistHtml(checklist){
+  if(!checklist||!checklist.length) return ''
+  const total = checklist.length
+  const done = checklist.filter(i=>i.done).length
+  const pct = total ? Math.round(done/total*100) : 0
+  let itemsHtml = checklist.map(item => `
+    <div class="cl-item">
+      <input type="checkbox" ${item.done?'checked':''} onchange="toggleChecklistItem('${item.id}',this.checked,event)" style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;"/>
+      <span class="cl-item-text ${item.done?'done':''}">${escHtml(item.text)}</span>
+    </div>`).join('')
+  return `
+    <div class="checklist-wrap" onclick="event.stopPropagation()">
+      <div class="checklist-header">
+        <div class="checklist-title">Checklist <span class="checklist-count">${done}/${total}</span></div>
+      </div>
+      <div class="checklist-prog"><div class="cl-prog-bar"><div class="cl-prog-fill" style="width:${pct}%"></div></div></div>
+      <div class="cl-items">${itemsHtml}</div>
+    </div>`
+}
+
+async function toggleChecklistItem(itemId, done, event){
+  event.stopPropagation()
+  const cardEl = event.target.closest('.card')
+  if(!cardEl) return
+  const cardId = cardEl.dataset.id
+  const card = cards.find(c=>c.id===cardId)
+  if(!card) return
+  let checklist = card.checklist ? JSON.parse(card.checklist) : []
+  const idx = checklist.findIndex(i=>i.id===itemId)
+  if(idx>=0) checklist[idx].done = done
+  const payload = {checklist: JSON.stringify(checklist)}
+  cards.find(c=>c.id===cardId).checklist = JSON.stringify(checklist)
+  renderBoard()
+  db.from('cards').update(payload).eq('id',cardId)
 }
 
 function closeModal(){document.getElementById('modal').classList.remove('open')}
