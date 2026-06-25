@@ -189,6 +189,54 @@
   .cl-input-row input:focus{border-color:var(--accent);}
   .cl-input-row button{padding:4px 10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;font-family:inherit;}
 
+
+  /* CAMPANHAS */
+  .camp-wrap{padding:24px;}
+  .camp-top{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+  .camp-top h2{font-size:18px;font-weight:700;flex:1;}
+  .month-nav{display:flex;align-items:center;gap:8px;}
+  .month-nav-btn{background:var(--white);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;}
+  .month-nav-btn:hover{background:var(--bg);}
+  .month-label{font-size:14px;font-weight:600;color:var(--text);min-width:120px;text-align:center;}
+  .camp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+  .camp-kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+  .camp-kpi-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+  .camp-kpi-val{font-size:22px;font-weight:700;color:var(--text);}
+  .camp-kpi-sub{font-size:10px;color:var(--light);margin-top:2px;}
+  .cal-wrap{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border);}
+  .cal-dow{padding:8px 4px;text-align:center;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;background:var(--bg);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+  .cal-cell{min-height:80px;border-right:1px solid #F0EEEA;border-bottom:1px solid #F0EEEA;padding:6px;vertical-align:top;}
+  .cal-cell:nth-child(7n){border-right:none;}
+  .cal-cell.other-month{background:#FAFAF9;}
+  .cal-cell.other-month .cal-day-num{color:var(--light);}
+  .cal-day-num{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
+  .cal-day-num.today{background:var(--accent);color:white;}
+  .cpill{border-radius:4px;padding:2px 6px;font-size:10px;font-weight:500;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+  .cpill:hover{opacity:.8;}
+  .cpill.promocao{background:#DBEAFE;color:#1E40AF;}
+  .cpill.lancamento{background:#D1FAE5;color:#065F46;}
+  .cpill.acao{background:#FEF3C7;color:#92400E;}
+  .cpill.multi{background:#F3E8FF;color:#7E22CE;}
+  .camp-list{display:flex;flex-direction:column;gap:10px;}
+  .camp-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:box-shadow .15s;}
+  .camp-card:hover{box-shadow:var(--shadow);border-color:var(--border2);}
+  .camp-card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .camp-card-name{font-size:14px;font-weight:600;color:var(--text);flex:1;}
+  .camp-tipo-pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;}
+  .camp-card-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px;}
+  .camp-meta-item{font-size:11px;color:var(--muted);}
+  .camp-meta-item strong{display:block;font-size:12px;color:var(--text);margin-top:1px;}
+  .camp-resultado{background:var(--bg);border-radius:8px;padding:10px 12px;}
+  .camp-resultado-title{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+  .camp-resultado-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .camp-rstat{text-align:center;}
+  .camp-rstat-val{font-size:15px;font-weight:700;color:var(--text);}
+  .camp-rstat-lbl{font-size:9px;color:var(--light);text-transform:uppercase;margin-top:2px;}
+  .camp-obs{background:var(--bg);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--muted);font-style:italic;margin-bottom:8px;}
+  .no-camp{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+
 </style>
 </head>
 <body>
@@ -213,6 +261,7 @@
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showView('board',this)">Board</button>
     <button class="nav-tab" onclick="showView('painel',this)">Painel</button>
+    <button class="nav-tab" onclick="showView('campanhas',this)">Campanhas</button>
   </div>
   <div class="nav-spacer"></div>
   <div class="nav-user">
@@ -268,6 +317,83 @@
     <div class="kpi-grid" id="kpi-grid"></div>
     <div class="people-grid" id="people-grid">
       <div class="loading"><span class="spinner"></span>Carregando...</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- CAMPANHAS VIEW -->
+<div id="view-campanhas" class="view">
+  <div class="camp-wrap">
+    <div class="camp-top">
+      <h2>Campanhas</h2>
+      <div class="month-nav">
+        <button class="month-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <div class="month-label" id="camp-month-label">—</div>
+        <button class="month-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:7px 16px;font-size:13px;border-radius:20px;" onclick="openCampModal()">+ Nova campanha</button>
+    </div>
+    <div class="camp-kpis" id="camp-kpis"></div>
+    <div class="cal-wrap">
+      <div class="cal-dow-row">
+        <div class="cal-dow">Dom</div><div class="cal-dow">Seg</div><div class="cal-dow">Ter</div>
+        <div class="cal-dow">Qua</div><div class="cal-dow">Qui</div><div class="cal-dow">Sex</div><div class="cal-dow">Sáb</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div class="camp-list" id="camp-list"></div>
+  </div>
+</div>
+
+<!-- CAMPANHA MODAL -->
+<div class="modal-backdrop" id="camp-modal">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <h3 id="camp-modal-title">Nova campanha</h3>
+      <button class="modal-close" onclick="closeCampModal()">×</button>
+    </div>
+    <div class="field"><label>Nome *</label><input type="text" id="cf-nome" placeholder="Ex: Black Friday Antecipada..."/></div>
+    <div class="field-row">
+      <div class="field"><label>Tipo</label>
+        <select id="cf-tipo">
+          <option value="promocao">Promoção/Desconto</option>
+          <option value="lancamento">Lançamento</option>
+          <option value="acao">Ação Comercial</option>
+          <option value="multi">Múltiplo</option>
+        </select>
+      </div>
+      <div class="field"><label>Responsável</label>
+        <select id="cf-resp">
+          <option value="">Sem responsável</option>
+          <option>Davi Rangel</option>
+          <option>Joyce Diana</option>
+          <option>Keyla Lima</option>
+          <option>Lilian Kroquevichy</option>
+          <option>Rubia Vieira</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Data início *</label><input type="date" id="cf-inicio"/></div>
+      <div class="field"><label>Data fim *</label><input type="date" id="cf-fim"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Produto</label><input type="text" id="cf-produto" placeholder="Ex: Plano Plus..."/></div>
+      <div class="field"><label>Desconto/Benefício</label><input type="text" id="cf-desconto" placeholder="Ex: 30% no 1º mês..."/></div>
+    </div>
+    <div class="field"><label>Observações</label><textarea id="cf-obs" placeholder="Detalhes da campanha..."></textarea></div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
+      <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;">Resultados</div>
+      <div class="field-row">
+        <div class="field"><label>Receita (R$)</label><input type="number" id="cf-receita" placeholder="0"/></div>
+        <div class="field"><label>Conversão (%)</label><input type="number" id="cf-conversao" placeholder="0" step="0.1"/></div>
+      </div>
+      <div class="field"><label>Ticket médio (R$)</label><input type="number" id="cf-ticket" placeholder="0"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCampModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveCampanha()">Salvar</button>
     </div>
   </div>
 </div>
@@ -351,6 +477,7 @@ function showView(name,btn){
   document.getElementById('view-'+name).classList.add('active')
   btn.classList.add('active')
   if(name==='painel')renderPainel()
+  if(name==='campanhas')loadCampanhas()
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -645,6 +772,215 @@ async function deleteCard(id){
   })
 }
 
+
+
+// ── Campanhas ─────────────────────────────────────────────────────────────
+let campanhas = []
+let campEditingId = null
+let campCurrentDate = new Date()
+
+async function loadCampanhas(){
+  const{data,error}=await db.from('campanhas').select('*').order('data_inicio')
+  if(error){showToast('Erro ao carregar campanhas');return}
+  campanhas=data||[]
+  renderCampanhas()
+}
+
+function changeMonth(dir){
+  campCurrentDate.setMonth(campCurrentDate.getMonth()+dir)
+  renderCampanhas()
+}
+
+function renderCampanhas(){
+  const year=campCurrentDate.getFullYear()
+  const month=campCurrentDate.getMonth()
+  const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+  document.getElementById('camp-month-label').textContent=monthNames[month]+' '+year
+
+  // filter for current month
+  const mc=campanhas.filter(c=>{
+    const ini=new Date(c.data_inicio+'T00:00:00')
+    const fim=new Date(c.data_fim+'T00:00:00')
+    const mStart=new Date(year,month,1)
+    const mEnd=new Date(year,month+1,0)
+    return ini<=mEnd&&fim>=mStart
+  })
+
+  // KPIs
+  const totalReceita=mc.reduce((s,c)=>s+(+c.receita||0),0)
+  const avgConv=mc.length?mc.reduce((s,c)=>s+(+c.conversao||0),0)/mc.length:0
+  const avgTicket=mc.length?mc.reduce((s,c)=>s+(+c.ticket_medio||0),0)/mc.length:0
+  document.getElementById('camp-kpis').innerHTML=`
+    <div class="camp-kpi"><div class="camp-kpi-lbl">Campanhas</div><div class="camp-kpi-val">${mc.length}</div><div class="camp-kpi-sub">no mês</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-lbl">Receita gerada</div><div class="camp-kpi-val" style="color:#065F46">R$${totalReceita.toLocaleString('pt-BR')}</div><div class="camp-kpi-sub">estimado</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-lbl">Conversão média</div><div class="camp-kpi-val" style="color:var(--accent)">${avgConv.toFixed(1)}%</div><div class="camp-kpi-sub">no mês</div></div>
+    <div class="camp-kpi"><div class="camp-kpi-lbl">Ticket médio</div><div class="camp-kpi-val">R$${avgTicket.toLocaleString('pt-BR',{maximumFractionDigits:0})}</div><div class="camp-kpi-sub">no mês</div></div>
+  `
+
+  // Calendar
+  renderCalendar(year, month, mc)
+
+  // List
+  renderCampList(mc)
+}
+
+function renderCalendar(year, month, mc){
+  const grid = document.getElementById('cal-grid')
+  grid.innerHTML = ''
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month+1, 0).getDate()
+  const daysInPrev = new Date(year, month, 0).getDate()
+  const today = new Date()
+
+  // prev month days
+  for(let i=firstDay-1;i>=0;i--){
+    const cell=document.createElement('div')
+    cell.className='cal-cell other-month'
+    cell.innerHTML=`<div class="cal-day-num">${daysInPrev-i}</div>`
+    grid.appendChild(cell)
+  }
+
+  // current month days
+  for(let d=1;d<=daysInMonth;d++){
+    const cell=document.createElement('div')
+    cell.className='cal-cell'
+    const isToday=today.getFullYear()===year&&today.getMonth()===month&&today.getDate()===d
+    cell.innerHTML=`<div class="cal-day-num${isToday?' today':''}">${d}</div>`
+    const dayDate=new Date(year,month,d)
+    mc.forEach(c=>{
+      const ini=new Date(c.data_inicio+'T00:00:00')
+      const fim=new Date(c.data_fim+'T00:00:00')
+      if(dayDate>=ini&&dayDate<=fim){
+        const pill=document.createElement('div')
+        pill.className=`cpill ${c.tipo}`
+        pill.textContent=c.nome
+        pill.onclick=(e)=>{e.stopPropagation();editCampanha(c.id)}
+        cell.appendChild(pill)
+      }
+    })
+    grid.appendChild(cell)
+  }
+
+  // next month days
+  const totalCells = Math.ceil((firstDay+daysInMonth)/7)*7
+  for(let d=1;d<=totalCells-firstDay-daysInMonth;d++){
+    const cell=document.createElement('div')
+    cell.className='cal-cell other-month'
+    cell.innerHTML=`<div class="cal-day-num">${d}</div>`
+    grid.appendChild(cell)
+  }
+}
+
+function renderCampList(mc){
+  const list=document.getElementById('camp-list')
+  if(!mc.length){list.innerHTML='<div class="no-camp">Nenhuma campanha neste mês.<br>Clique em "+ Nova campanha" para adicionar!</div>';return}
+  list.innerHTML=''
+  const tipoLabels={promocao:'Promoção',lancamento:'Lançamento',acao:'Ação Comercial',multi:'Múltiplo'}
+  const tipoColors={
+    promocao:'background:#DBEAFE;color:#1E40AF',
+    lancamento:'background:#D1FAE5;color:#065F46',
+    acao:'background:#FEF3C7;color:#92400E',
+    multi:'background:#F3E8FF;color:#7E22CE'
+  }
+  mc.forEach(c=>{
+    const card=document.createElement('div')
+    card.className='camp-card'
+    card.onclick=()=>editCampanha(c.id)
+    const ini=new Date(c.data_inicio+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})
+    const fim=new Date(c.data_fim+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})
+    card.innerHTML=`
+      <div class="camp-card-top">
+        <div class="camp-card-name">${escHtml(c.nome)}</div>
+        <span class="camp-tipo-pill" style="${tipoColors[c.tipo]||''}">${tipoLabels[c.tipo]||c.tipo}</span>
+      </div>
+      <div class="camp-card-meta">
+        <div class="camp-meta-item">Período<strong>${ini} → ${fim}</strong></div>
+        ${c.produto?`<div class="camp-meta-item">Produto<strong>${escHtml(c.produto)}</strong></div>`:''}
+        ${c.desconto?`<div class="camp-meta-item">Desconto<strong>${escHtml(c.desconto)}</strong></div>`:''}
+        ${c.responsavel?`<div class="camp-meta-item">Responsável<strong>${escHtml(c.responsavel)}</strong></div>`:''}
+      </div>
+      ${c.observacoes?`<div class="camp-obs">${escHtml(c.observacoes)}</div>`:''}
+      ${(c.receita||c.conversao||c.ticket_medio)?`
+      <div class="camp-resultado">
+        <div class="camp-resultado-title">Resultados</div>
+        <div class="camp-resultado-grid">
+          <div class="camp-rstat"><div class="camp-rstat-val" style="color:#065F46">R$${(+c.receita||0).toLocaleString('pt-BR')}</div><div class="camp-rstat-lbl">Receita</div></div>
+          <div class="camp-rstat"><div class="camp-rstat-val" style="color:var(--accent)">${(+c.conversao||0).toFixed(1)}%</div><div class="camp-rstat-lbl">Conversão</div></div>
+          <div class="camp-rstat"><div class="camp-rstat-val">R$${(+c.ticket_medio||0).toLocaleString('pt-BR',{maximumFractionDigits:0})}</div><div class="camp-rstat-lbl">Ticket médio</div></div>
+        </div>
+      </div>`:''}
+    `
+    list.appendChild(card)
+  })
+}
+
+function openCampModal(status){
+  campEditingId=null
+  document.getElementById('camp-modal-title').textContent='Nova campanha'
+  document.getElementById('cf-nome').value=''
+  document.getElementById('cf-tipo').value='promocao'
+  document.getElementById('cf-resp').value=''
+  document.getElementById('cf-inicio').value=''
+  document.getElementById('cf-fim').value=''
+  document.getElementById('cf-produto').value=''
+  document.getElementById('cf-desconto').value=''
+  document.getElementById('cf-obs').value=''
+  document.getElementById('cf-receita').value=''
+  document.getElementById('cf-conversao').value=''
+  document.getElementById('cf-ticket').value=''
+  document.getElementById('camp-modal').classList.add('open')
+  setTimeout(()=>document.getElementById('cf-nome').focus(),50)
+}
+
+function editCampanha(id){
+  const c=campanhas.find(x=>x.id===id);if(!c)return
+  campEditingId=id
+  document.getElementById('camp-modal-title').textContent='Editar campanha'
+  document.getElementById('cf-nome').value=c.nome||''
+  document.getElementById('cf-tipo').value=c.tipo||'promocao'
+  document.getElementById('cf-resp').value=c.responsavel||''
+  document.getElementById('cf-inicio').value=c.data_inicio||''
+  document.getElementById('cf-fim').value=c.data_fim||''
+  document.getElementById('cf-produto').value=c.produto||''
+  document.getElementById('cf-desconto').value=c.desconto||''
+  document.getElementById('cf-obs').value=c.observacoes||''
+  document.getElementById('cf-receita').value=c.receita||''
+  document.getElementById('cf-conversao').value=c.conversao||''
+  document.getElementById('cf-ticket').value=c.ticket_medio||''
+  document.getElementById('camp-modal').classList.add('open')
+}
+
+async function saveCampanha(){
+  const nome=document.getElementById('cf-nome').value.trim()
+  const inicio=document.getElementById('cf-inicio').value
+  const fim=document.getElementById('cf-fim').value
+  if(!nome||!inicio||!fim){showToast('Preencha nome e datas!');return}
+  const payload={
+    nome,
+    tipo:document.getElementById('cf-tipo').value,
+    responsavel:document.getElementById('cf-resp').value,
+    data_inicio:inicio,
+    data_fim:fim,
+    produto:document.getElementById('cf-produto').value.trim(),
+    desconto:document.getElementById('cf-desconto').value.trim(),
+    observacoes:document.getElementById('cf-obs').value.trim(),
+    receita:parseFloat(document.getElementById('cf-receita').value)||0,
+    conversao:parseFloat(document.getElementById('cf-conversao').value)||0,
+    ticket_medio:parseFloat(document.getElementById('cf-ticket').value)||0,
+  }
+  closeCampModal()
+  if(campEditingId){
+    const{error}=await db.from('campanhas').update(payload).eq('id',campEditingId)
+    showToast(error?'Erro ao salvar':'Campanha atualizada ✓')
+  }else{
+    const{error}=await db.from('campanhas').insert(payload)
+    showToast(error?'Erro ao criar':'Campanha criada ✓')
+  }
+  await loadCampanhas()
+}
+
+function closeCampModal(){document.getElementById('camp-modal').classList.remove('open')}
+document.getElementById('camp-modal').addEventListener('click',e=>{if(e.target===document.getElementById('camp-modal'))closeCampModal()})
 
 // ── Checklist ─────────────────────────────────────────────────────────────
 let modalChecklist = []
