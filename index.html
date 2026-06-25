@@ -565,9 +565,11 @@ function buildCard(card){
     deadlineHtml='<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:'+dlColor+';background:'+dlBg+';padding:3px 8px;border-radius:20px;margin-top:6px;">'+dlIcon+' '+dlLabel+'</span>'
   }
   const ini=card.owner?card.owner.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase():''
+  const calBtn = card.status==='Concluído' ? `<button class="card-menu-btn" onclick="addToCalendario('${card.id}')" title="Adicionar ao Calendário" style="color:var(--accent)">📅</button>` : ''
   el.innerHTML=`
     <div class="card-menu">
       <button class="card-menu-btn" onclick="editCard('${card.id}')">✏</button>
+      ${calBtn}
       <button class="card-menu-btn" onclick="deleteCard('${card.id}')" style="color:#991B1B">✕</button>
     </div>
     <div class="card-title">${escHtml(card.title)}</div>
@@ -912,6 +914,30 @@ function renderCampList(mc){
     `
     list.appendChild(card)
   })
+}
+
+
+function addToCalendario(cardId){
+  const card = cards.find(c=>c.id===cardId)
+  if(!card) return
+  // switch to campanhas view
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'))
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('view-campanhas').classList.add('active')
+  document.querySelectorAll('.nav-tab').forEach(t=>{if(t.textContent==='Calendário')t.classList.add('active')})
+  loadCampanhas()
+  // pre-fill modal
+  setTimeout(()=>{
+    openCampModal()
+    document.getElementById('cf-nome').value = card.title||''
+    document.getElementById('cf-resp').value = card.owner||''
+    if(card.deadline){
+      document.getElementById('cf-inicio').value = card.deadline
+      document.getElementById('cf-fim').value = card.deadline
+    }
+    document.getElementById('cf-obs').value = card.description||''
+    showToast('Preencha as datas e resultados da campanha!')
+  }, 300)
 }
 
 function openCampModal(status){
