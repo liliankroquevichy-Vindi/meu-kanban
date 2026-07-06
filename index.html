@@ -12,6 +12,7 @@
     --bg:#EEF2F7;--white:#FFFFFF;--border:#E8E6E0;--border2:#D0CEC7;
     --text:#1A1918;--muted:#706E68;--light:#A09E98;--accent:#6366F1;--accent-dk:#4F46E5;--header:#1B5EC5;
     --s-inbox-bg:#EEEDFE;--s-inbox-fg:#4740B6;
+    --s-prio-bg:#FFF0E0;--s-prio-fg:#C2410C;
     --s-doing-bg:#FEF3C7;--s-doing-fg:#92400E;
     --s-valid-bg:#E0F2FE;--s-valid-fg:#075985;
     --s-done-bg:#D1FAE5;--s-done-fg:#065F46;
@@ -63,6 +64,7 @@
   .column{flex:1 1 260px;display:flex;flex-direction:column;min-width:200px;}
   .col-header{display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;border-bottom:2px solid var(--border);margin-bottom:12px;}
   .col-header.inbox{border-color:var(--s-inbox-fg);}
+  .col-header.prio{border-color:var(--s-prio-fg);}
   .col-header.doing{border-color:var(--s-doing-fg);}
   .col-header.valid{border-color:var(--s-valid-fg);}
   .col-header.done{border-color:var(--s-done-fg);}
@@ -70,6 +72,7 @@
   .col-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;}
   .col-pill{font-size:11px;font-weight:600;padding:1px 8px;border-radius:20px;}
   .pill-inbox{background:var(--s-inbox-bg);color:var(--s-inbox-fg);}
+  .pill-prio{background:var(--s-prio-bg);color:var(--s-prio-fg);}
   .pill-doing{background:var(--s-doing-bg);color:var(--s-doing-fg);}
   .pill-valid{background:var(--s-valid-bg);color:var(--s-valid-fg);}
   .pill-done{background:var(--s-done-bg);color:var(--s-done-fg);}
@@ -89,6 +92,7 @@
   .card-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
   .tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;}
   .tag-inbox{background:var(--s-inbox-bg);color:var(--s-inbox-fg);}
+  .tag-prio{background:var(--s-prio-bg);color:var(--s-prio-fg);}
   .tag-doing{background:var(--s-doing-bg);color:var(--s-doing-fg);}
   .tag-valid{background:var(--s-valid-bg);color:var(--s-valid-fg);}
   .tag-done{background:var(--s-done-bg);color:var(--s-done-fg);}
@@ -410,7 +414,7 @@
     <div class="field-row">
       <div class="field"><label>Status</label>
         <select id="f-status">
-          <option>Entrada</option><option>Fazendo</option><option>Validação</option><option>Concluído</option>
+          <option>Entrada</option><option>Priorizado</option><option>Fazendo</option><option>Validação</option><option>Concluído</option>
         </select>
       </div>
       <div class="field"><label>Prioridade</label>
@@ -501,6 +505,7 @@ function subscribeRealtime(){
 // ── Board ─────────────────────────────────────────────────────────────────
 const COLS=[
   {id:'Entrada',  cls:'inbox',  pillCls:'pill-inbox',  tagCls:'tag-inbox'},
+  {id:'Priorizado',cls:'prio',   pillCls:'pill-prio',   tagCls:'tag-prio'},
   {id:'Fazendo',  cls:'doing',  pillCls:'pill-doing',  tagCls:'tag-doing'},
   {id:'Validação',cls:'valid',  pillCls:'pill-valid',  tagCls:'tag-valid'},
   {id:'Concluído',cls:'done',   pillCls:'pill-done',   tagCls:'tag-done'},
